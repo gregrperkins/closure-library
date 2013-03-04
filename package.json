@@ -44,5 +44,6 @@
       "email": "dan.pupius@gmail.com"
     }
   ],
+  "main": "paths.js",
   "private": true
 }
