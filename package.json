@@ -45,5 +45,9 @@
     }
   ],
   "main": "paths.js",
-  "private": true
+  "keywords": ["closure", "library", "goog", "browser", "client", "dom"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gregrperkins/closure-library"
+  }
 }
