@@ -80,8 +80,12 @@ a:hover {
   var parallelInput = document.getElementById('parallel');
   var filterInput = document.getElementById('filter');
 
-  function setFilterFunction() {
+  function inputFilterFunction() {
     var matchValue = filterInput.value || '';
+    setFilterFunction();
+  }
+
+  function setFilterFunction(matchValue) {
     testRunner.setFilterFunction(function(testPath) {
       return testPath.indexOf(matchValue) > -1;
     });
@@ -106,8 +110,54 @@ a:hover {
     testRunner.setPoolSize(e.target.checked ? 8 : 1);
   });
 
-  goog.events.listen(filterInput, 'keyup', setFilterFunction);
-  setFilterFunction();
+  goog.events.listen(filterInput, 'keyup', inputFilterFunction);
+
+  ///////////////////////////////////////////////////////////////////////////
+  // MODIFICATIONS FOR AUTOMATED BROWSER TESTING
+  ///////////////////////////////////////////////////////////////////////////
+
+  // Check whether the query string has a given flag
+  var hasQueryFlag = function(str) {
+    var re = new RegExp('[?&]' + str + '([&=]|$)', 'i');
+    return re.test(document.location.href);
+  };
+
+  // Get a filter from the query string
+  if (hasQueryFlag('filter')) {
+    var filterRe = new RegExp('[?&]filter=(.*?)([&=]|$)', 'i');
+    filterRe.exec(document.location.href);
+    var filter = RegExp.$1;
+    setFilterFunction(filter);
+  }
+
+  // Override the testRunner's finish_ so we can send the report somewhere
+  if (hasQueryFlag('report')) {
+    testRunner.finish_ = function () {
+      // Take the default actions
+      goog.testing.MultiTestRunner.prototype.finish_.call(this);
+
+      // Ship up our test results.
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/done');
+
+      // If we're autoclosing, close when done
+      if (hasQueryFlag('autoclose')) {
+        var closeFn = function () {
+          window.close();
+        }
+        xhr.onload = closeFn;
+        xhr.onreadystatechange = closeFn;
+      }
+
+      // TODO(gregp): send structured data?
+      xhr.send(testRunner.reportEl_.innerText);
+    };
+  }
+
+  // Autorun
+  if (hasQueryFlag('autorun')) {
+    testRunner.start();
+  }
 </script>
 </body>
 </html>
