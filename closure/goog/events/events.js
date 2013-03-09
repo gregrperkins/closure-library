@@ -55,18 +55,17 @@
 
 goog.provide('goog.events');
 goog.provide('goog.events.Key');
+goog.provide('goog.events.ListenableType');
 
 goog.require('goog.array');
+/** @suppress {extraRequire} */
 goog.require('goog.debug.entryPointRegistry');
-goog.require('goog.debug.errorHandlerWeakDep');
 goog.require('goog.events.BrowserEvent');
 goog.require('goog.events.BrowserFeature');
 goog.require('goog.events.Event');
-goog.require('goog.events.EventWrapper');
 goog.require('goog.events.Listenable');
 goog.require('goog.events.Listener');
 goog.require('goog.object');
-goog.require('goog.userAgent');
 
 
 /**
@@ -79,6 +78,17 @@ goog.events.Key;
  * @typedef {EventTarget|goog.events.Listenable|goog.events.EventTarget}
  */
 goog.events.ListenableType;
+
+
+/**
+ * Whether to be strict with custom event targets. When set to true,
+ * listening/dispatching on un-initialized event targets will fail.
+ * An event target may be un-initialized if you forgot to call
+ * goog.events.EventTarget constructor in the custom event target
+ * constructor.
+ * @type {boolean}
+ */
+goog.events.STRICT_EVENT_TARGET = false;
 
 
 /**
@@ -175,6 +185,15 @@ goog.events.listen = function(src, type, listener, opt_capt, opt_handler) {
   goog.events.listeners_[key] = listenableKey;
   return key;
 };
+
+
+/**
+ * Property name that indicates that an object is a
+ * goog.events.EventTarget.
+ * @type {string}
+ * @const
+ */
+goog.events.CUSTOM_EVENT_ATTR = 'customEvent_';
 
 
 /**
@@ -281,8 +300,10 @@ goog.events.listen_ = function(
 
   // Attach the proxy through the browser's API
   if (src.addEventListener) {
-    if (src == goog.global || !src.customEvent_) {
+    if (src == goog.global || !src[goog.events.CUSTOM_EVENT_ATTR]) {
       src.addEventListener(type, proxy, capture);
+    } else if (goog.events.STRICT_EVENT_TARGET) {
+      src.assertInitialized();
     }
   } else {
     // The else above used to be else if (src.attachEvent) and then there was
@@ -471,7 +492,7 @@ goog.events.unlistenByKey = function(key) {
     // TODO(arv): What is this goog.global for? Why would anyone listen to
     // events on the [[Global]] object? Is it supposed to be window? Why would
     // we not want to allow removing event listeners on the window?
-    if (src == goog.global || !src.customEvent_) {
+    if (src == goog.global || !src[goog.events.CUSTOM_EVENT_ATTR]) {
       src.removeEventListener(type, proxy, capture);
     }
   } else if (src.detachEvent) {
@@ -609,14 +630,12 @@ goog.events.cleanUp_ = function(type, capture, srcUid, listenerArray) {
 
 
 /**
- * Removes all listeners from an object, if no object is specified it will
- * remove all listeners that have been registered.  You can also optionally
- * remove listeners of a particular type or capture phase.
+ * Removes all listeners from an object. You can also optionally
+ * remove listeners of a particular type.
  *
- * removeAll() will not remove listeners registered directly on a
- * goog.events.Listenable and listeners registered via add(Once)Listener.
- *
- * @param {Object=} opt_obj Object to remove listeners from.
+ * @param {Object=} opt_obj Object to remove listeners from. Not
+ *     specifying opt_obj is now DEPRECATED (it used to remove all
+ *     registered listeners).
  * @param {string=} opt_type Type of event to, default is all types.
  * @return {number} Number of listeners removed.
  */
@@ -650,6 +669,28 @@ goog.events.removeAll = function(opt_obj, opt_type) {
     });
   }
 
+  return count;
+};
+
+
+/**
+ * Removes all native listeners registered via goog.events. Native
+ * listeners are listeners on native browser objects (such as DOM
+ * elements). In particular, goog.events.Listenable and
+ * goog.events.EventTarget listeners will NOT be removed.
+ * @return {number} Number of listeners removed.
+ */
+goog.events.removeAllNativeListeners = function() {
+  var count = 0;
+  goog.object.forEach(goog.events.listeners_, function(listener, key) {
+    var src = listener.src;
+    // Only remove the listener if it is not on custom event target.
+    if (!goog.events.Listenable.isImplementedBy(src) &&
+        !src[goog.events.CUSTOM_EVENT_ATTR]) {
+      goog.events.unlistenByKey(key);
+      count++;
+    }
+  });
   return count;
 };
 
@@ -947,7 +988,21 @@ goog.events.getTotalListenerCount = function() {
  */
 goog.events.dispatchEvent = function(src, e) {
   if (goog.events.Listenable.USE_LISTENABLE_INTERFACE) {
+    if (goog.events.STRICT_EVENT_TARGET) {
+      goog.asserts.assert(
+          goog.events.Listenable.isImplementedBy(src),
+          'Can not use goog.events.dispatchEvent with ' +
+          'non-goog.events.Listenable instance.');
+    }
     return src.dispatchEvent(e);
+  }
+
+  if (goog.events.STRICT_EVENT_TARGET) {
+    goog.asserts.assert(
+        goog.events.STRICT_EVENT_TARGET && src[goog.events.CUSTOM_EVENT_ATTR],
+        'Can not use goog.events.dispatchEvent with ' +
+        'non-goog.events.EventTarget instance.');
+    src.assertInitialized();
   }
 
   var type = e.type || e;

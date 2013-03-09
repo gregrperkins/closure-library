@@ -18,14 +18,18 @@
  * @author eae@google.com (Emil A Eklund)
  */
 
-
+/** @suppress {extraProvide} */
 goog.provide('goog.positioningTest');
 
 goog.require('goog.dom');
+goog.require('goog.dom.DomHelper');
 goog.require('goog.math.Box');
 goog.require('goog.math.Coordinate');
-goog.require('goog.math.Rect');
+goog.require('goog.math.Size');
 goog.require('goog.positioning');
+goog.require('goog.positioning.Corner');
+goog.require('goog.positioning.Overflow');
+goog.require('goog.positioning.OverflowStatus');
 goog.require('goog.style');
 goog.require('goog.testing.ExpectedFailures');
 goog.require('goog.testing.jsunit');
@@ -65,6 +69,7 @@ function tearDown() {
   testArea.setAttribute('style', '');
   testArea.innerHTML = '';
 }
+
 
 /**
  * This is used to round pixel values on FF3 Mac.
@@ -358,9 +363,10 @@ function testPositionAtAnchorBodyViewport() {
   assertEquals('Left edge of popup should line up with left edge of anchor.',
                anchorRect.left,
                popupRect.left);
-  assertEquals('Popup should have the same y position as the anchor.',
-               anchorRect.top,
-               popupRect.top);
+  assertRoughlyEquals('Popup should have the same y position as the anchor.',
+                      anchorRect.top,
+                      popupRect.top,
+                      1);
 
   // Anchor top start to bottom right.
   goog.positioning.positionAtAnchor(anchor, corner.BOTTOM_RIGHT,
@@ -370,9 +376,10 @@ function testPositionAtAnchorBodyViewport() {
   assertEquals('Right edge of popup should line up with right edge of anchor.',
                anchorRect.left + anchorRect.width,
                popupRect.left + popupRect.width);
-  assertEquals('Popup should be positioned just below the anchor.',
-               anchorRect.top + anchorRect.height,
-               popupRect.top);
+  assertRoughlyEquals('Popup should be positioned just below the anchor.',
+                      anchorRect.top + anchorRect.height,
+                      popupRect.top,
+                      1);
 
   // Anchor top right to top left.
   goog.positioning.positionAtAnchor(anchor, corner.TOP_LEFT,
@@ -382,9 +389,10 @@ function testPositionAtAnchorBodyViewport() {
   assertEquals('Right edge of popup should line up with left edge of anchor.',
                anchorRect.left,
                popupRect.left + popupRect.width);
-  assertEquals('Popup should have the same y position as the anchor.',
-               anchorRect.top,
-               popupRect.top);
+  assertRoughlyEquals('Popup should have the same y position as the anchor.',
+                      anchorRect.top,
+                      popupRect.top,
+                      1);
 }
 
 function testPositionAtAnchorSpecificViewport() {
@@ -407,9 +415,10 @@ function testPositionAtAnchorSpecificViewport() {
   assertEquals('Right edge of popup should line up with left edge of anchor.',
                anchorRect.left,
                popupRect.left + popupRect.width);
-  assertEquals('Popup should have the same y position as the anchor.',
-               anchorRect.top,
-               popupRect.top);
+  assertRoughlyEquals('Popup should have the same y position as the anchor.',
+                      anchorRect.top,
+                      popupRect.top,
+                      1);
 
   // position again within box1.
   var box = document.getElementById('box1');
@@ -439,9 +448,10 @@ function testPositionAtAnchorSpecificViewport() {
   assertRoughlyEquals(
       'Left edge of popup should line up with left edge of viewport.',
       viewport.left, popupRect.left, EPSILON);
-  assertEquals('Popup should have the same y position as the anchor.',
-               anchorRect.top,
-               popupRect.top);
+  assertRoughlyEquals('Popup should have the same y position as the anchor.',
+                      anchorRect.top,
+                      popupRect.top,
+                      1);
 }
 
 function testPositionAtAnchorOutsideViewport() {
@@ -972,48 +982,53 @@ function testPositionAtAnchorWithOverflowScrollOffsetParent() {
   goog.positioning.positionAtAnchor(
       anchor, corner.TOP_LEFT, popup, corner.TOP_RIGHT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 200 - 75 - scrollbarWidth,
           testAreaOffset.y + 100 - 50 - scrollbarWidth),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   goog.style.setPosition(overflowDiv, 400 /* left */, 0 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.TOP_RIGHT, popup, corner.TOP_LEFT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 400, testAreaOffset.y + 100 - 50 - scrollbarWidth),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   goog.style.setPosition(overflowDiv, 0 /* left */, 400 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.BOTTOM_LEFT, popup, corner.BOTTOM_RIGHT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 200 - 75 - scrollbarWidth, testAreaOffset.y + 400),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   goog.style.setPosition(overflowDiv, 400 /* left */, 400 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.BOTTOM_RIGHT, popup, corner.BOTTOM_LEFT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 400, testAreaOffset.y + 400),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   // No overflow.
   goog.style.setPosition(overflowDiv, 300 - 50 /* left */, 300 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.TOP_LEFT, popup, corner.TOP_RIGHT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 300 - 50, testAreaOffset.y + 300),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 }
 
 function testPositionAtAnchorWithOverflowHiddenParent() {
@@ -1040,47 +1055,52 @@ function testPositionAtAnchorWithOverflowHiddenParent() {
   goog.positioning.positionAtAnchor(
       anchor, corner.TOP_LEFT, popup, corner.TOP_RIGHT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 200 - 75, testAreaOffset.y + 100 - 50),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   goog.style.setPosition(overflowDiv, 400 /* left */, 0 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.TOP_RIGHT, popup, corner.TOP_LEFT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 400, testAreaOffset.y + 100 - 50),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   goog.style.setPosition(overflowDiv, 0 /* left */, 400 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.BOTTOM_LEFT, popup, corner.BOTTOM_RIGHT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 200 - 75, testAreaOffset.y + 400),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   goog.style.setPosition(overflowDiv, 400 /* left */, 400 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.BOTTOM_RIGHT, popup, corner.BOTTOM_LEFT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 400, testAreaOffset.y + 400),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 
   // No overflow.
   goog.style.setPosition(overflowDiv, 300 - 50 /* left */, 300 /* top */);
   goog.positioning.positionAtAnchor(
       anchor, corner.TOP_LEFT, popup, corner.TOP_RIGHT, null, null,
       overflow.ADJUST_X | overflow.ADJUST_Y);
-  assertObjectEquals(
+  assertObjectRoughlyEquals(
       new goog.math.Coordinate(
           testAreaOffset.x + 300 - 50, testAreaOffset.y + 300),
-      goog.style.getPageOffset(popup));
+      goog.style.getPageOffset(popup),
+      1);
 }
 
 function createPopupDiv(width, height) {

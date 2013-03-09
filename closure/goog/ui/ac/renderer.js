@@ -24,6 +24,7 @@ goog.provide('goog.ui.ac.Renderer.CustomRenderer');
 goog.require('goog.a11y.aria');
 goog.require('goog.a11y.aria.Role');
 goog.require('goog.a11y.aria.State');
+goog.require('goog.array');
 goog.require('goog.dispose');
 goog.require('goog.dom');
 goog.require('goog.dom.classes');
@@ -32,7 +33,6 @@ goog.require('goog.events.EventTarget');
 goog.require('goog.events.EventType');
 goog.require('goog.fx.dom.FadeInAndShow');
 goog.require('goog.fx.dom.FadeOutAndHide');
-goog.require('goog.iter');
 goog.require('goog.positioning');
 goog.require('goog.positioning.Corner');
 goog.require('goog.positioning.Overflow');
@@ -124,7 +124,7 @@ goog.ui.ac.Renderer = function(opt_parentNode, opt_customRenderer,
   this.hilitedRow_ = -1;
 
   /**
-   * The time that the suggestion rows were updated.
+   * The time that the rendering of the menu rows started
    * @type {number}
    * @protected
    * @suppress {underscore}
@@ -486,14 +486,7 @@ goog.ui.ac.Renderer.prototype.hiliteRow = function(index) {
       if (this.target_) {
         goog.a11y.aria.setActiveDescendant(this.target_, rowDiv);
       }
-      var offset =
-          goog.style.getContainerOffsetToScrollInto(rowDiv, this.element_);
-      if (offset.x != this.element_.scrollLeft ||
-          offset.y != this.element_.scrollTop) {
-        this.element_.scrollLeft = offset.x;
-        this.element_.scrollTop = offset.y;
-        this.startRenderingRows_ = goog.now();
-      }
+      goog.style.scrollIntoContainerView(rowDiv, this.element_);
     }
   }
 };
@@ -598,7 +591,7 @@ goog.ui.ac.Renderer.prototype.redraw = function() {
     this.customRenderer_.render(this, this.element_, this.rows_, this.token_);
   } else {
     var curRow = null;
-    goog.iter.forEach(this.rows_, function(row) {
+    goog.array.forEach(this.rows_, function(row) {
       row = this.renderRowHtml(row, this.token_);
       if (this.topAlign_) {
         // Aligned with top of target = best match at bottom
