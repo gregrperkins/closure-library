@@ -22,8 +22,12 @@
 
 goog.provide('goog.ui.FlatMenuButtonRenderer');
 
+goog.require('goog.a11y.aria');
+goog.require('goog.a11y.aria.State');
+goog.require('goog.asserts');
+goog.require('goog.dom');
+goog.require('goog.string');
 goog.require('goog.style');
-goog.require('goog.ui.ControlContent');
 goog.require('goog.ui.FlatButtonRenderer');
 goog.require('goog.ui.INLINE_BLOCK_CLASSNAME');
 goog.require('goog.ui.Menu');
@@ -201,4 +205,3 @@ goog.ui.registry.setDecoratorByClassName(
       return new goog.ui.MenuButton(null, null,
           goog.ui.FlatMenuButtonRenderer.getInstance());
     });
-

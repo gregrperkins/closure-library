@@ -131,6 +131,11 @@ goog.provide = function(name) {
 /**
  * Marks that the current file should only be used for testing, and never for
  * live code in production.
+ *
+ * In the case of unit tests, the message may optionally be an exact
+ * namespace for the test (e.g. 'goog.stringTest'). The linter will then
+ * ignore the extra provide (if not explicitly defined in the code).
+ *
  * @param {string=} opt_message Optional message to add to the error that's
  *     raised when used in production code.
  */
@@ -1074,13 +1079,14 @@ goog.bindJs_ = function(fn, selfObj, var_args) {
  * <pre>var barMethBound = bind(myFunction, myObj, 'arg1', 'arg2');
  * barMethBound('arg3', 'arg4');</pre>
  *
- * @param {Function} fn A function to partially apply.
- * @param {Object|undefined} selfObj Specifies the object which |this| should
+ * @param {?function(this:T, ...)} fn A function to partially apply.
+ * @param {T} selfObj Specifies the object which |this| should
  *     point to when the function is run.
  * @param {...*} var_args Additional arguments that are partially
  *     applied to the function.
  * @return {!Function} A partially-applied form of the function bind() was
  *     invoked as a method of.
+ * @template T
  * @suppress {deprecated} See above.
  */
 goog.bind = function(fn, selfObj, var_args) {
